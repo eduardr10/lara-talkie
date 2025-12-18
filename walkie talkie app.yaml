@@ -1,0 +1,25 @@
+Primer pensamiento:
+  - Aplicación simple de comunicación como los walkie talkies tradicionales. Selector de canal y botón para hablar. 
+  - El mensaje deberá llegar a todos los que estén conectados a ese canal. La comunicación será half duplex, tal como los radios. 
+  - Para evitar el colapso de un canal, se debe esperar un momento entre mensajes y los mensajes serán con máximo 1 minuto
+  - Como identificador, cada usuario tendrá un username que debe ser único y se mostrará en la pantalla de quienes le escuchen cuando está hablando. 
+  - La app no llevará registro de quienes han hablado ni formas alternas de comunicarse entre quienes hablan, simplemente será para comunicar de forma directa a quienes estén en un canal.
+  - El primer inicio o el registro está por definir si requiere correo o se hace de forma menos robusta.
+  - Por ahora no hay nombre para la app, aunque Lara Talkie o algo similar me gustaría.
+
+El desarrollo:
+  - Laravel en su versión más reciente, livewire para la interfaz, laravel reverb para la comunicación en tiempo real, sqlite para la base de datos.
+  - Native PHP para una versión que se instale en odenadores.
+  - Sign Up por username y pin. Sin correo y sin forma de recuperar.
+
+La interfaz:
+  - Espectativa:
+    - Arriba: Nombre de la app y nombre de usuario. Botón para desplegar un menú y salir de sesión.
+    - Medio: Botón con ícono de micrófono que sirve para hablar. Se deshabilita cuando se está recibiendo un mensaje.
+    - Abajo: Muestra onda de audio cuando se recibe un mensaje.
+
+  - Beta:
+    - Arriba: Nombre de app y nombre de usuario.
+    - Medio: Botón para poder hablar.
+    - Abajo: Botón de cerrar sesión.
+
