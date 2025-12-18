@@ -26,10 +26,13 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(
             when(
                 Features::canManageTwoFactorAuthentication()
-                    && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
                 ['password.confirm'],
                 [],
             ),
         )
         ->name('two-factor.show');
+
+    // Ruta principal de LaraTalkie
+    Route::get('talkie', \App\Livewire\WalkieTalkie::class)->name('talkie');
 });

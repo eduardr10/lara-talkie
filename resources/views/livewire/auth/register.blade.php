@@ -9,33 +9,12 @@
             @csrf
 
             <!-- Username -->
-            <flux:input
-                name="name"
-                :label="__('Username')"
-                :value="old('name')"
-                type="text"
-                required
-                autofocus
-                autocomplete="username"
-                :placeholder="__('Choose a username')"
-            />
+            <flux:input name="name" :label="__('Username')" :value="old('name')" type="text" required autofocus
+                autocomplete="username" :placeholder="__('Choose a username')" />
 
             <!-- Pin -->
-            <flux:input
-                name="pin"
-                :label="__('6-digit Pin')"
-                type="password"
-                required
-                pattern="[0-9]{6}"
-                maxlength="6"
-                minlength="6"
-                autocomplete="off"
-                :placeholder="__('Enter a 6-digit pin')"
-            />
-                autocomplete="new-password"
-                :placeholder="__('Confirm password')"
-                viewable
-            />
+            <flux:input name="pin" :label="__('6-digit Pin')" type="password" required pattern="[0-9]{6}" maxlength="6"
+                minlength="6" autocomplete="off" :placeholder="__('Enter a 6-digit pin')" />
 
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full">
