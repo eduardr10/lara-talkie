@@ -1,10 +1,19 @@
 [build]
 builder = "NIXPACKS"
 
-[deploy]
-# Proceso principal: La Web
-startCommand = "php artisan migrate --force && php artisan optimize && php artisan serve --host=0.0.0.0 --port=$PORT"
+[variables]
+# Esto soluciona el problema de la carpeta /public
+DOCUMENT_ROOT = "/public"
+# Forzamos a que PHP reconozca el puerto de Railway
+PORT = "8080"
 
-# Proceso secundario: Reverb
+[deploy]
+# Comando para el servidor web principal
+# Incluye migraciones, optimización y el inicio del servidor
+startCommand = "php artisan migrate --force && php artisan optimize && php artisan serve --host=0.0.0.0 --port=$PORT"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
 [deploy.workers]
-reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
+# Proceso independiente para Laravel Reverb
+reverb = "php artisan reverb:start --host=0.0.0.0 --port=8081"
