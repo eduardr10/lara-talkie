@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Proceso principal: La Web
+startCommand = "php artisan migrate --force && php artisan optimize && php artisan serve --host=0.0.0.0 --port=$PORT"
+
+# Proceso secundario: Reverb
+[deploy.workers]
+reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
