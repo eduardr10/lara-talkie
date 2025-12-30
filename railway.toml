@@ -2,10 +2,9 @@
 builder = "NIXPACKS"
 
 [deploy]
-# El comando de inicio debe ser EXACTAMENTE este para que Nixpacks 
-# levante el servidor web de producción (Apache/Nginx) correctamente.
-startCommand = "php artisan migrate --force && php artisan optimize && start-container"
+# Ejecutamos las migraciones ANTES del comando de inicio automático
+startCommand = "php artisan migrate --force && php artisan optimize"
 
 [deploy.workers]
-# Proceso separado para Reverb
+# Proceso independiente para Reverb
 reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
