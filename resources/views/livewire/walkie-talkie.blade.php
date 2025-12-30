@@ -46,16 +46,26 @@
         </div>
     </div>
 
+    <audio x-ref="remoteAudio" style="display: none;"></audio>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('walkieTalkie', () => ({
                 channel: @entangle('channel'),
                 isRecording: false,
                 mediaRecorder: null,
-                audioChunks: [],
                 username: @js($username),
                 prevChannel: null,
                 isReceiving: @entangle('isReceiving'),
+
+                // Audio Playback State
+                remoteStreamId: null,
+                mediaSource: null,
+                sourceBuffer: null,
+                audioQueue: [],
+                isAppending: false,
+
+                // Recording State
+                currentStreamId: null,
 
                 init() {
                     this.joinChannel();
@@ -72,16 +82,85 @@
                         window.Echo.join('talkie.channel.' + this.channel)
                             .listen('.VoiceBroadcast', (e) => {
                                 if (e.username !== this.username) {
-                                    const audio = new Audio('data:audio/webm;base64,' + e.audio);
-                                    audio.play();
+                                    this.handleIncomingAudio(e);
                                 }
                             });
+                    }
+                },
+
+                handleIncomingAudio(e) {
+                    if (this.remoteStreamId !== e.streamId) {
+                        this.remoteStreamId = e.streamId;
+                        this.setupMediaSource();
+                    }
+
+                    // Convert base64 to ArrayBuffer
+                    const binaryString = atob(e.audio);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    this.audioQueue.push(bytes.buffer);
+                    this.processAudioQueue();
+                },
+
+                setupMediaSource() {
+                    this.audioQueue = [];
+                    this.isAppending = false;
+
+                    const audioEl = this.$refs.remoteAudio;
+
+                    // Cleanup old MediaSource if needed
+                    if (this.mediaSource && this.mediaSource.readyState === 'open') {
+                        try { this.mediaSource.endOfStream(); } catch (e) { }
+                    }
+
+                    this.mediaSource = new MediaSource();
+                    audioEl.src = URL.createObjectURL(this.mediaSource);
+
+                    // Attempt to play
+                    audioEl.play().catch(e => console.log('Autoplay blocked/waiting', e));
+
+                    this.mediaSource.addEventListener('sourceopen', () => {
+                        const mime = 'audio/webm; codecs=opus';
+                        if (MediaSource.isTypeSupported(mime)) {
+                            try {
+                                this.sourceBuffer = this.mediaSource.addSourceBuffer(mime);
+                                this.sourceBuffer.mode = 'sequence';
+                                this.sourceBuffer.addEventListener('updateend', () => {
+                                    this.isAppending = false;
+                                    this.processAudioQueue();
+                                });
+                            } catch (e) {
+                                console.error('Error adding SourceBuffer', e);
+                            }
+                        } else {
+                            console.error('MIME type not supported: ' + mime);
+                        }
+                    });
+                },
+
+                processAudioQueue() {
+                    if (this.isAppending || this.audioQueue.length === 0 || !this.sourceBuffer || this.sourceBuffer.updating) return;
+
+                    if (this.mediaSource.readyState !== 'open') return;
+
+                    this.isAppending = true;
+                    const chunk = this.audioQueue.shift();
+                    try {
+                        this.sourceBuffer.appendBuffer(chunk);
+                    } catch (err) {
+                        console.error('Error appending buffer', err);
+                        this.isAppending = false;
                     }
                 },
 
                 async startRecording() {
                     if (this.isRecording) return;
                     this.isRecording = true;
+                    this.currentStreamId = Date.now().toString();
 
                     try {
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -89,38 +168,22 @@
                             this.isRecording = false;
                             return;
                         }
+
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                        const mimeType = 'audio/webm; codecs=opus';
+                        const options = MediaRecorder.isTypeSupported(mimeType) ? { mimeType } : {};
+
+                        this.mediaRecorder = new MediaRecorder(stream, options);
 
                         this.mediaRecorder.ondataavailable = (e) => {
-                            if (e.data.size > 0) this.audioChunks.push(e.data);
-                        };
-
-                        this.mediaRecorder.onstop = async () => {
-                            if (this.audioChunks.length) {
-                                const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                    const base64 = reader.result.split(',')[1];
-                                    fetch('/api/talkie/audio', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
-                                        },
-                                        body: JSON.stringify({
-                                            channel: this.channel,
-                                            username: this.username,
-                                            audio: base64
-                                        })
-                                    });
-                                };
-                                reader.readAsDataURL(blob);
-                                this.audioChunks = [];
+                            if (e.data.size > 0) {
+                                this.sendAudioChunk(e.data);
                             }
                         };
 
-                        this.mediaRecorder.start();
+                        // Send chunks every 250ms
+                        this.mediaRecorder.start(100);
+
                         // Max 1 minute
                         setTimeout(() => {
                             if (this.isRecording) this.stopRecording();
@@ -139,6 +202,27 @@
                         this.mediaRecorder.stop();
                     }
                     this.mediaRecorder.stream?.getTracks().forEach(track => track.stop());
+                },
+
+                sendAudioChunk(blob) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        fetch('/api/talkie/audio', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                channel: this.channel,
+                                username: this.username,
+                                audio: base64,
+                                stream_id: this.currentStreamId
+                            })
+                        });
+                    };
+                    reader.readAsDataURL(blob);
                 }
             }));
         });

@@ -9,7 +9,8 @@ Route::middleware(['web', 'auth'])->post('/talkie/audio', function (Request $req
         'channel' => 'required|integer|min:1|max:8',
         'username' => 'required|string',
         'audio' => 'required|string',
+        'stream_id' => 'required|string',
     ]);
-    broadcast(new VoiceBroadcast($request->username, $request->channel, $request->audio))->toOthers();
+    broadcast(new VoiceBroadcast($request->username, $request->channel, $request->audio, $request->stream_id))->toOthers();
     return response()->json(['status' => 'ok']);
 });

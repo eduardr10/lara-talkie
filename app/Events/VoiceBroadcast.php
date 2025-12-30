@@ -15,12 +15,14 @@ class VoiceBroadcast implements ShouldBroadcastNow
     public $username;
     public $channel;
     public $audio;
+    public $streamId;
 
-    public function __construct($username, $channel, $audio)
+    public function __construct($username, $channel, $audio, $streamId)
     {
         $this->username = $username;
         $this->channel = $channel;
         $this->audio = $audio;
+        $this->streamId = $streamId;
     }
 
     public function broadcastOn()
