@@ -2,14 +2,13 @@
 builder = "NIXPACKS"
 
 [variables]
+# Indispensable para que el servidor web sepa dónde entrar
 DOCUMENT_ROOT = "/public"
 
 [deploy]
-# Usamos php artisan serve. Es vital que el host sea 0.0.0.0
-startCommand = "php artisan migrate --force && php artisan optimize && php artisan serve --host=0.0.0.0 --port=$PORT"
-healthCheckPath = "/"
-healthCheckTimeout = 120
+# Solo comandos de preparación. Nixpacks iniciará el servidor web automáticamente.
+startCommand = "php artisan migrate --force && php artisan optimize"
 
 [deploy.workers]
-# El servidor Reverb escucha internamente en el 8080
+# Proceso independiente para Reverb
 reverb = "php artisan reverb:start --host=0.0.0.0 --port=8080"
